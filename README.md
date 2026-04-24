@@ -2,17 +2,20 @@
 
 A small OpenCLI helper repo for browser-driven email signup flows, with the current example focused on Groq.
 
-It uses the browser flow that was verified to work reliably:
+It uses browser flows that were verified to work reliably:
 
 - `opencli browser open`
 - `opencli browser state`
 - `opencli browser type`
 - `opencli browser click`
+- `opencli browser eval`
 
 This repo provides:
 
-- `scripts/opencli-groq-signup.sh` — the proven signup helper
-- `clis/groq/signup.js` — an `opencli groq signup` command that shells out to the helper script
+- `scripts/opencli-groq-signup.sh` — submit Groq email signup/login without OAuth
+- `clis/groq/signup.js` — `opencli groq signup`
+- `scripts/opencli-groq-create-api-key.sh` — open a Groq magic-link login URL and drive API key creation
+- `clis/groq/create-api-key.js` — `opencli groq create-api-key`
 - `scripts/scan-secrets.py` — a pre-publish privacy scan for placeholder-only emails and token-like secrets
 
 ## Why this exists
@@ -21,7 +24,9 @@ Groq's Stytch form accepted the same email addresses when using real browser typ
 
 So this implementation keeps the **OpenCLI command interface** while routing the actual form interaction through the proven browser commands.
 
-## Command shape
+## Commands
+
+### 1) Email signup/login
 
 ```bash
 opencli groq signup \
@@ -41,6 +46,27 @@ Explicit email example:
 opencli groq signup --email demo@example.com -f json
 ```
 
+### 2) Create API key from a magic-link login URL
+
+```bash
+opencli groq create-api-key \
+  --login-url 'https://stytch.com/v1/magic_links/redirect?...' \
+  --name groq-openclaw \
+  --wait-seconds 120 \
+  -f json
+```
+
+Current behavior:
+
+- opens the login URL
+- follows redirect into Groq
+- opens the API Keys page
+- opens the Create API Key dialog
+- fills the key display name
+- waits for **manual Cloudflare Turnstile completion**
+- submits the form once verification is present
+- returns structured status output
+
 ## Requirements
 
 - `opencli`
@@ -51,32 +77,23 @@ opencli groq signup --email demo@example.com -f json
 
 ## Install
 
-Clone this repo somewhere on your machine, then install the command into your local OpenCLI custom adapters:
+Clone this repo somewhere on your machine, then install the commands into your local OpenCLI custom adapters:
 
 ```bash
 mkdir -p ~/.opencli/clis/groq
 cp clis/groq/signup.js ~/.opencli/clis/groq/signup.js
+cp clis/groq/create-api-key.js ~/.opencli/clis/groq/create-api-key.js
 chmod +x scripts/opencli-groq-signup.sh
+chmod +x scripts/opencli-groq-create-api-key.sh
 export OPENCLI_GROQ_SIGNUP_SCRIPT="$PWD/scripts/opencli-groq-signup.sh"
+export OPENCLI_GROQ_CREATE_API_KEY_SCRIPT="$PWD/scripts/opencli-groq-create-api-key.sh"
 ```
 
-If you want the env var to persist, add it to your shell profile.
+If you want the env vars to persist, add them to your shell profile.
 
-## Usage
+## Output examples
 
-Generated email:
-
-```bash
-opencli groq signup --email-domain example.com --prefix groq -f json
-```
-
-Explicit email:
-
-```bash
-opencli groq signup --email demo@example.com -f json
-```
-
-## Output example
+Signup:
 
 ```json
 [
@@ -86,6 +103,19 @@ opencli groq signup --email demo@example.com -f json
     "status": "check-your-email",
     "detail": "Groq accepted the email and asked to check inbox.",
     "url": "https://console.groq.com/home"
+  }
+]
+```
+
+Create API key (before turnstile is solved):
+
+```json
+[
+  {
+    "key_name": "groq-openclaw",
+    "status": "waiting-manual-verification",
+    "detail": "Cloudflare Turnstile was not completed within the wait window. Complete it manually and rerun, or increase --wait-seconds.",
+    "url": "https://console.groq.com/keys"
   }
 ]
 ```
@@ -102,15 +132,15 @@ The scanner is intentionally conservative. It checks for:
 
 - non-placeholder email addresses
 - token-like strings such as GitHub tokens or `sk-...`
-- suspicious secret-related keywords in code or docs
+- suspicious secret-like assignments
 
 This repo also includes a GitHub Actions workflow that runs the same scan on every push and pull request.
 
 ## Notes
 
-- This repo only covers the **email submit** step.
+- This repo currently covers the **email submit** step and the **API key creation flow up to/manual through Turnstile**.
+- Cloudflare Turnstile still requires manual completion.
 - If Groq later redirects into Google OAuth, that should be treated as a different route, not as success for the email-only flow.
-- If you want to continue the full flow, the next step is reading the magic-link email and opening it.
 
 ## License
 
