@@ -16,6 +16,8 @@ This repo provides:
 - `clis/groq/signup.js` — `opencli groq signup`
 - `scripts/opencli-groq-create-api-key.sh` — open a Groq magic-link login URL and drive API key creation
 - `clis/groq/create-api-key.js` — `opencli groq create-api-key`
+- `scripts/opencli-groq-logout.sh` — log out the currently authenticated Groq browser session
+- `clis/groq/logout.js` — `opencli groq logout`
 - `scripts/scan-secrets.py` — a pre-publish privacy scan for placeholder-only emails and token-like secrets
 
 ## Why this exists
@@ -46,7 +48,19 @@ Explicit email example:
 opencli groq signup --email demo@example.com -f json
 ```
 
-### 2) Create API key from a magic-link login URL
+### 2) Log out of Groq
+
+```bash
+opencli groq logout
+```
+
+Current behavior:
+
+- opens Groq in the browser bridge
+- clicks the visible Sign Out button
+- reports the resulting session state
+
+### 3) Create API key from a magic-link login URL
 
 ```bash
 opencli groq create-api-key \
@@ -82,10 +96,13 @@ Clone this repo somewhere on your machine, then install the commands into your l
 ```bash
 mkdir -p ~/.opencli/clis/groq
 cp clis/groq/signup.js ~/.opencli/clis/groq/signup.js
+cp clis/groq/logout.js ~/.opencli/clis/groq/logout.js
 cp clis/groq/create-api-key.js ~/.opencli/clis/groq/create-api-key.js
 chmod +x scripts/opencli-groq-signup.sh
+chmod +x scripts/opencli-groq-logout.sh
 chmod +x scripts/opencli-groq-create-api-key.sh
 export OPENCLI_GROQ_SIGNUP_SCRIPT="$PWD/scripts/opencli-groq-signup.sh"
+export OPENCLI_GROQ_LOGOUT_SCRIPT="$PWD/scripts/opencli-groq-logout.sh"
 export OPENCLI_GROQ_CREATE_API_KEY_SCRIPT="$PWD/scripts/opencli-groq-create-api-key.sh"
 ```
 
