@@ -56,7 +56,50 @@ opencli browser open "$URL" >/dev/null
 opencli browser wait time 3 >/dev/null
 STATE_OUTPUT="$(opencli browser state)"
 
-SIGN_OUT_INDEX="$(printf '%s\n' "$STATE_OUTPUT" | sed -n '/Sign Out/ s/.*\[\([0-9]\+\)\]<button>.*/\1/p' | head -n1)"
+if printf '%s' "$STATE_OUTPUT" | grep -qiE 'Login|Log In|Continue with email|Create Account or Login'; then
+  URL_OUTPUT="$(opencli browser get url)"
+  CURRENT_URL="$(printf '%s\n' "$URL_OUTPUT" | sed -n 's/.*"url": "\(.*\)".*/\1/p' | head -n1)"
+  if [[ -z "$CURRENT_URL" ]]; then
+    CURRENT_URL="$(printf '%s\n' "$URL_OUTPUT" | sed -n 's/^URL: //p' | head -n1)"
+  fi
+  if [[ -z "$CURRENT_URL" ]]; then
+    CURRENT_URL="$URL"
+  fi
+  python3 - <<PY
+import csv, json, sys
+row = {
+  'status': 'already-signed-out',
+  'detail': 'Groq is already on a signed-out/login state; no Sign Out action was needed.',
+  'url': ${CURRENT_URL@Q},
+}
+fmt = ${FORMAT@Q}
+if fmt == 'json':
+    print(json.dumps([row], ensure_ascii=False, indent=2))
+elif fmt == 'csv':
+    writer = csv.DictWriter(sys.stdout, fieldnames=list(row.keys()))
+    writer.writeheader()
+    writer.writerow(row)
+else:
+    for k, v in row.items():
+        print(f"{k}: {v}")
+PY
+  exit 0
+fi
+
+SIGN_OUT_INDEX="$(STATE_TEXT="$STATE_OUTPUT" python3 - <<'PY'
+import os, re, sys
+text = os.environ.get('STATE_TEXT', '')
+lines = text.splitlines()
+for i, line in enumerate(lines):
+    if 'Sign Out' in line:
+        for prev in reversed(lines[:i+1]):
+            m = re.search(r'\[(\d+)\]<button', prev)
+            if m:
+                print(m.group(1))
+                sys.exit(0)
+print('')
+PY
+)"
 if [[ -z "$SIGN_OUT_INDEX" ]]; then
   echo "Failed to locate the Sign Out button on the Groq page." >&2
   echo "$STATE_OUTPUT" >&2
