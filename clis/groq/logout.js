@@ -18,6 +18,7 @@ function parseJson(text) {
 cli({
   site: 'groq',
   name: 'logout',
+  access: 'write',
   description: 'Log out the currently authenticated Groq browser session',
   domain: 'console.groq.com',
   strategy: Strategy.LOCAL,

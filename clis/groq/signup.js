@@ -18,6 +18,7 @@ function parseJson(text) {
 cli({
   site: 'groq',
   name: 'signup',
+  access: 'write',
   description: 'Start Groq email signup/login with the proven browser type/click path',
   domain: 'console.groq.com',
   strategy: Strategy.LOCAL,

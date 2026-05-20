@@ -18,6 +18,7 @@ function parseJson(text) {
 cli({
   site: 'groq',
   name: 'create-api-key',
+  access: 'write',
   description: 'Use a Groq magic-link login URL, open API Keys, and create a key after manual Turnstile verification',
   domain: 'console.groq.com',
   strategy: Strategy.LOCAL,
