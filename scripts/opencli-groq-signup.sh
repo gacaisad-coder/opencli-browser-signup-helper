@@ -11,6 +11,7 @@ Rules:
 - --name-mode defaults to random
 - If --email is provided, --email-domain/--name-mode/--prefix are ignored
 - This script uses the proven opencli browser type/click flow for Groq email signup
+- --session defaults to groq-signup (OpenCLI browser session name)
 EOF
 }
 
@@ -42,6 +43,7 @@ PREFIX="groq"
 URL="https://console.groq.com/home"
 WAIT_SECONDS=2
 FORMAT="table"
+SESSION="groq-signup"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -67,6 +69,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --wait-seconds)
       WAIT_SECONDS="${2:-}"
+      shift 2
+      ;;
+    --session)
+      SESSION="${2:-}"
       shift 2
       ;;
     -f|--format)
@@ -106,15 +112,17 @@ else
   SOURCE="generated"
 fi
 
-opencli browser open "$URL" >/dev/null
-STATE_OUTPUT="$(opencli browser state)"
+# Open page and inspect current interactive map.
+opencli browser "$SESSION" open "$URL" >/dev/null
+STATE_OUTPUT="$(opencli browser "$SESSION" state)"
 
+# When already on confirmation page, try again to reset back to form.
 if printf '%s' "$STATE_OUTPUT" | grep -qi 'Check your email'; then
   TRY_AGAIN_INDEX="$(printf '%s\n' "$STATE_OUTPUT" | sed -n 's/.*\[\([0-9]\+\)\]<button>Try again<.*/\1/p' | head -n1)"
   if [[ -n "$TRY_AGAIN_INDEX" ]]; then
-    opencli browser click "$TRY_AGAIN_INDEX" >/dev/null
+    opencli browser "$SESSION" click "$TRY_AGAIN_INDEX" >/dev/null
     sleep 1
-    STATE_OUTPUT="$(opencli browser state)"
+    STATE_OUTPUT="$(opencli browser "$SESSION" state)"
   fi
 fi
 
@@ -127,8 +135,8 @@ if [[ -z "$INPUT_INDEX" || -z "$BUTTON_INDEX" ]]; then
   exit 1
 fi
 
-opencli browser type "$INPUT_INDEX" "$FINAL_EMAIL" >/dev/null
-VALUE_OUTPUT="$(opencli browser get value "$INPUT_INDEX")"
+opencli browser "$SESSION" type "$INPUT_INDEX" "$FINAL_EMAIL" >/dev/null
+VALUE_OUTPUT="$(opencli browser "$SESSION" get value "$INPUT_INDEX")"
 ACTUAL_VALUE="$(printf '%s\n' "$VALUE_OUTPUT" | sed -n 's/.*"value": "\(.*\)".*/\1/p' | head -n1)"
 if [[ -z "$ACTUAL_VALUE" ]]; then
   ACTUAL_VALUE="$(printf '%s\n' "$VALUE_OUTPUT" | sed -n 's/.*value.:.\(.*\)$/\1/p' | head -n1 | tr -d '"')"
@@ -139,10 +147,10 @@ if [[ "$ACTUAL_VALUE" != "$FINAL_EMAIL" ]]; then
   exit 1
 fi
 
-opencli browser click "$BUTTON_INDEX" >/dev/null
-opencli browser wait time "$WAIT_SECONDS" >/dev/null
-POST_STATE="$(opencli browser state)"
-URL_OUTPUT="$(opencli browser get url)"
+opencli browser "$SESSION" click "$BUTTON_INDEX" >/dev/null
+opencli browser "$SESSION" wait time "$WAIT_SECONDS" >/dev/null
+POST_STATE="$(opencli browser "$SESSION" state)"
+URL_OUTPUT="$(opencli browser "$SESSION" get url)"
 CURRENT_URL="$(printf '%s\n' "$URL_OUTPUT" | sed -n 's/.*"url": "\(.*\)".*/\1/p' | head -n1)"
 if [[ -z "$CURRENT_URL" ]]; then
   CURRENT_URL="$(printf '%s\n' "$URL_OUTPUT" | sed -n 's/^URL: //p' | head -n1)"

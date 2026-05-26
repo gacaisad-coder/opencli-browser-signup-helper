@@ -30,31 +30,37 @@ cli({
     { name: 'prefix', type: 'string', default: 'groq', description: 'prefix used for generated random email local-part' },
     { name: 'url', type: 'string', default: 'https://console.groq.com/home', description: 'Groq entry URL' },
     { name: 'wait-seconds', type: 'int', default: 2, description: 'seconds to wait after submit before checking result' },
+    { name: 'session', type: 'string', default: 'groq-signup', description: 'opencli browser session name' },
   ],
   columns: ['email', 'source', 'status', 'detail', 'url'],
-  func: async (_page, kwargs) => {
+  func: async (kwargs) => {
     const args = ['-f', 'json'];
 
-    const email = normalize(kwargs.email);
+    const get = (kebab, fallback = '') => kwargs[kebab] ?? kwargs[kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] ?? fallback;
+
+    const email = normalize(get('email'));
     if (email) {
       args.push('--email', email);
     } else {
-      const emailDomain = normalize(kwargs['email-domain']);
+      const emailDomain = normalize(get('email-domain'));
       if (!emailDomain) {
         throw new Error('email-domain is required when --email is not provided');
       }
       args.push('--email-domain', emailDomain);
-      args.push('--name-mode', normalize(kwargs['name-mode']) || 'random');
-      args.push('--prefix', normalize(kwargs.prefix) || 'groq');
+      args.push('--name-mode', normalize(get('name-mode', 'random')) || 'random');
+      args.push('--prefix', normalize(get('prefix', 'groq')) || 'groq');
     }
 
-    const url = normalize(kwargs.url);
+    const url = normalize(get('url'));
     if (url) args.push('--url', url);
 
-    const waitSeconds = Number(kwargs['wait-seconds'] ?? 2);
+    const waitSeconds = Number(get('wait-seconds', 2));
     if (Number.isFinite(waitSeconds) && waitSeconds > 0) {
       args.push('--wait-seconds', String(waitSeconds));
     }
+
+    const session = normalize(get('session', 'groq-signup'));
+    if (session) args.push('--session', session);
 
     let stdout = '';
     try {

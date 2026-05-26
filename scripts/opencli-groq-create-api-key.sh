@@ -146,7 +146,7 @@ if [[ "$VERIFIED" != "true" ]]; then
   STATUS="waiting-manual-verification"
   DETAIL="Cloudflare Turnstile was not completed within the wait window. Complete it manually and rerun, or increase --wait-seconds."
 else
-  opencli browser eval "(() => { const form = document.querySelector('div[role=dialog] form'); if (!form) return JSON.stringify({submitted:false, reason:'no-form'}); if (typeof form.requestSubmit === 'function') { form.requestSubmit(); return JSON.stringify({submitted:true, method:'requestSubmit'}); } form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true})); return JSON.stringify({submitted:true, method:'dispatchEvent'}); })()" >/dev/null
+  SUBMIT_OUTPUT="$(opencli browser eval "(() => { const form = document.querySelector('div[role=dialog] form'); if (!form) return JSON.stringify({submitted:false, reason:'no-form'}); if (typeof form.requestSubmit === 'function') { form.requestSubmit(); return JSON.stringify({submitted:true, method:'requestSubmit'}); } form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true})); return JSON.stringify({submitted:true, method:'dispatchEvent'}); })()")"
   opencli browser wait time 5 >/dev/null
   POST_STATE="$(opencli browser state)"
   URL_OUTPUT="$(opencli browser get url)"
